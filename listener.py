@@ -30,6 +30,10 @@ received_message = ["脑瓜子飞速运转中",
 nsfw_message = ["不可以色色", "这个图不太行捏", "过于劲爆，不宜展示", "这个图发不出来你不反思一下吗！",
                 "自由，民主，公正，法制"]
 
+whitelist = json.load(open('whitelist.json'))
+group_id = whitelist['group_id']
+private_id = whitelist['private_id']
+
 api = SdApi()
 
 message_processor = MessageProcessor()
@@ -98,8 +102,6 @@ def process_private_request(data):
 
 @app.route('/', methods=['POST'])
 def handle_request():
-    group_id = [717392613]
-    private_id = [2122130633]
 
     if request.method == 'POST':
         # Handle POST request
