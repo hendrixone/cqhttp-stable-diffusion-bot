@@ -13,18 +13,18 @@ IMAGE_DIM = 224  # required/default image dimensionality
 
 
 def load_images(image_paths, image_size, verbose=True):
-    '''
+    """
     Function for loading images into numpy arrays for passing to model.predict
     inputs:
         image_paths: list of image paths to load
         image_size: size into which images should be resized
         verbose: show all the image path and sizes loaded
-    
+
     outputs:
         loaded_images: loaded images on which keras model can run predictions
         loaded_image_indexes: paths of images which the function is able to process
-    
-    '''
+
+    """
     loaded_images = []
     loaded_image_paths = []
 

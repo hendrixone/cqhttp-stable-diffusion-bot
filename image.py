@@ -6,16 +6,19 @@ import time
 
 from PIL import Image
 
-from NSFW_Detector import predict
-
 
 class ImageProcessor:
     def __init__(self, cache_num):
         self.cache_num = cache_num
-        self.model = predict.load_model('./NSFW_Detector/mobilenet_v2_140_224')
 
-    def handle_images(self, r):
+    def handle_images(self, response):
+        """
+        :param response: SD_API response
+        :return: A list containing the path of generated image
+        """
         base_dir = "C:\\Users\\77431\\Desktop\\QQ\\data\\images\\output"  # Define your base directory here
+
+        # ChatGPT Generation ⬇
 
         # create a unique folder for each invocation using timestamp
         folder_name = str(int(time.time()))
@@ -30,15 +33,12 @@ class ImageProcessor:
             oldest_folder = folders.pop(0)
             shutil.rmtree(os.path.join(base_dir, oldest_folder))
 
-        # Save images to the new folder and classify them
+        # Save images to the new folder
         results = []
-        for index, i in enumerate(r['images']):
+        for index, i in enumerate(response['images']):
             image_path = os.path.join(base_dir, folder_name, f'{index}.jpg')
             image = Image.open(io.BytesIO(base64.b64decode(i.split(",", 1)[0])))
             image.save(image_path)
-
-            # classify the image
-            prediction = predict.classify(self.model, image_path)
-            results.append(prediction)
+            results.append(image_path)
 
         return results

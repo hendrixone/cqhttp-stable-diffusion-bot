@@ -23,7 +23,6 @@ def sent_private_msg(user_id, message):
 
 
 def send_group_msg(group_id, message):
-
     payload = {
         "action": "send_group_msg",
         "params": {
@@ -67,8 +66,42 @@ def send_group_forward_msg(group_id, messages, name, uin):
         return response
 
 
-def cq_parse_image(image_path):
-    return "[CQ:image,file=" + image_path + "]"
+def send_private_forward_msg(user_id, messages, name, uin):
+    build_messages = []
+    for messages in messages:
+        build_messages.append({
+            "type": "node",
+            "data": {
+                "name": name,
+                "uin": uin,
+                "content": messages
+            }
+        })
+    payload = {
+        "action": "send_private_forward_msg",
+        "params": {
+            "user_id": user_id,
+            "messages": build_messages
+        }
+    }
+    for i in range(2):
+        response = requests.post(url, headers=headers, data=json.dumps(payload))
+        response = response.json()
+        if response['status'] == 'failed':
+            print(response)
+            continue
+        return response
+
+
+def cq_parse_image(abs_path):
+    path = 'output'
+    temp = abs_path.split('\\')
+    for i in range(len(temp)):
+        if temp[i] == 'output':
+            for j in range(i + 1, len(temp)):
+                path += '\\' + temp[j]
+
+    return "[CQ:image,file=" + path + "]"
 
 
 if __name__ == '__main__':

@@ -9,8 +9,12 @@ default_negative = 'EasyNegative, negative_hand-neg, nsfw, nude'
 override_settings = {
     "CLIP_stop_at_last_layers": 2
 }
-base_prompt = 'masterpiece, best quality,'
-base_negative = 'EasyNegative, negative_hand-neg,'
+# base_prompt = 'masterpiece, best quality,'
+base_prompt = 'best quality, masterpiece, (photorealistic:1.4)'
+# base_negative = 'EasyNegative, negative_hand-neg,'
+base_negative = 'easynegative,ng_deepnegative_v1_75t,(worst quality:2),(low quality:2),(normal quality:2),lowres,bad anatomy,bad hands,normal quality,((monochrome)),((grayscale)),((watermark))'
+
+add_detailer = True
 
 
 class SdApi:
@@ -18,6 +22,10 @@ class SdApi:
         self.image_processor = ImageProcessor(20)
 
     def get_image(self, params):
+        """
+        :param params:
+        :return: A list containing the path of generated images
+        """
         prompt = params['prompt']
 
         hr_scale = 1.5
@@ -43,7 +51,7 @@ class SdApi:
         payload = {
             "prompt": base_prompt + prompt,
             "negative_prompt": negative,
-            "steps": 30,
+            "steps": 27,
             "sampler_name": "DPM++ SDE Karras",
             "batch_size": batch_size,
             "width": 512,
@@ -57,13 +65,24 @@ class SdApi:
             "override_settings": override_settings,
         }
 
-        response = requests.post(url=f'{url}/sdapi/v1/txt2img', json=payload)
+        if add_detailer:
+            payload['alwayson_scripts'] = {
+                "ADetailer": {
+                    "args": [
+                        {
+                            'ad_model': 'face_yolov8s.pt',
+                        }
+                    ]
+                }
+            }
 
-        r = response.json()
+        response = requests.post(url=f'{url}/sdapi/v1/txt2img', json=payload).json()
 
-        print(r['parameters'])
+        print(response)
 
-        return self.image_processor.handle_images(r)
+        print(response['parameters'])
+
+        return self.image_processor.handle_images(response)
 
 
 if __name__ == '__main__':
