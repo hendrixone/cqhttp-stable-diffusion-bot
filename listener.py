@@ -1,4 +1,6 @@
 import random
+import time
+import re
 
 from flask import Flask, request
 
@@ -9,19 +11,18 @@ from cqhttp_api import *
 
 app = Flask(__name__)
 
-prompt_regex = r"(?<=瑟图:)\s*(.*)"
-params_regex = r'^(.*?)(?=瑟图:)'
-sensitive_keywords = ['nude', 'nsfw', 'naked', 'nudity']
-
 nickname = 'bot:'
 self_name = '小万'
 fake_id = '1145141919'
 
 # 敏感内容检测阈值，越低越严格
-censor_level = 0.5
+censor_level = 0.6
 
+# Block sensitive keywords
 enable_keywords_check = False
+sensitive_keywords = ['nude', 'nsfw', 'naked', 'nudity']
 
+# Prompt words limit
 words_limit = 180
 
 received_message = ["脑瓜子飞速运转中",
@@ -30,10 +31,12 @@ received_message = ["脑瓜子飞速运转中",
 nsfw_message = ["不可以色色", "这个图不太行捏", "过于劲爆，不宜展示", "这个图发不出来你不反思一下吗！",
                 "自由，民主，公正，法制"]
 
+# Load whitelist from local json file
 whitelist = json.load(open('whitelist.json'))
 group_id = whitelist['group_id']
 private_id = whitelist['private_id']
 
+# Initialize Stable Diffusion API
 api = SdApi()
 
 message_processor = MessageProcessor()
@@ -66,9 +69,14 @@ def process_group_request(data):
         i = random.randint(0, len(received_message) - 1)
         print(send_group_msg(current_request_id, nickname +
                              received_message[i] + ' (' + rebuild_request_msg(params) + ')'))
+
+        # calculate time taken
+        start_time = time.time()
         response = api.get_image(params)
 
-        response_msg = process_images_to_msg(response, current_request_id)
+        api_time_taken = time.time() - start_time
+
+        response_msg = process_images_to_msg(response, api_time_taken)
         if not response_msg:
             i = random.randint(0, len(nsfw_message) - 1)
             send_group_msg(current_request_id, nickname + nsfw_message[i])
@@ -89,12 +97,21 @@ def process_private_request(data):
         print('解读失败')
         return 'ok'
     else:
+        # 非白名单提示
+        if data['user_id'] not in private_id:
+            sent_private_msg(data['user_id'], '还没被加入白名单捏，稍等哦')
+            return 'ok'
         # 发送请求收到确认
         print(sent_private_msg(current_request_id, nickname +
                                '收到请求' + ' (' + rebuild_request_msg(params) + ')'))
+        # calculate time taken
+        start_time = time.time()
+
         images_list = api.get_image(params)
 
-        response_msg = process_images_to_msg(images_list, enable_nsfw_filter=False)
+        api_time_taken = time.time() - start_time
+
+        response_msg = process_images_to_msg(images_list, api_time_taken, enable_nsfw_filter=False)
 
         print(send_private_forward_msg(current_request_id, response_msg, self_name, fake_id))
     return 'ok'
@@ -102,7 +119,6 @@ def process_private_request(data):
 
 @app.route('/', methods=['POST'])
 def handle_request():
-
     if request.method == 'POST':
         # Handle POST request
         data = request.get_json()  # Get JSON data from the request
@@ -114,16 +130,12 @@ def handle_request():
             process_group_request(data)
 
         if data['message_type'] == 'private':
-            if '来点瑟图' in data['message']:
-                if data['user_id'] not in private_id:
-                    sent_private_msg(data['user_id'], '还没被加入白名单捏，稍等哦')
-                    return 'ok'
-                process_private_request(data)
+            process_private_request(data)
 
         return 'ok'
 
 
-def process_images_to_msg(image_list, enable_nsfw_filter=True):
+def process_images_to_msg(image_list, api_time_taken, enable_nsfw_filter=True):
     messages = []
     for img_path in image_list:
         if enable_nsfw_filter:
@@ -131,13 +143,46 @@ def process_images_to_msg(image_list, enable_nsfw_filter=True):
             for key, value in predict.classify(model, img_path).items():
                 path = key
                 pred = value
-                if pred['hentai'] > censor_level or pred['sexy'] > censor_level or pred['porn'] > censor_level:
+                print(pred)
+                if pred['hentai'] > censor_level or pred['porn'] > censor_level:
                     return False
                 messages.append(cq_parse_image(path))
         else:
             messages.append(cq_parse_image(img_path))
 
+    # Append Additional Info
+    messages.append(generate_info(api_time_taken, image_list))
+
+    # Append guide message
+    messages.append("查看指北文件获取更多用法，遇到喜欢的图可以尝试重绘功能！")
+
     return messages
+
+
+def generate_info(time_taken, image_list):
+    """
+    Add Stable Diffusion Generation info for the message
+    :param time_taken:
+    :param image_list:
+    :return:
+    """
+    info = api.last_gen_info
+
+    # Extract the model
+    pattern = r'Model:\s(.*?),'
+    matches = re.findall(pattern, info['infotexts'][0])
+    model_used = matches[0]
+
+    message = (f"生成用时：{time_taken:.1f}秒\n"
+               f"使用模型：{model_used}")
+
+    # Generate id for each image
+    for path in image_list:
+        img_path = path.split('\\')
+        img_index = int(img_path[-1][0]) + 1
+        img_id = img_path[-2] + '-' + str(img_index)
+        message += f"\n图片{img_index}：{img_id}"
+    return message
 
 
 if __name__ == '__main__':
