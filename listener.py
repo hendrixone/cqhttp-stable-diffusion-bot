@@ -1,6 +1,7 @@
 import random
 import time
 import re
+import traceback
 
 from flask import Flask, request
 
@@ -57,6 +58,10 @@ def process_group_request(data):
     print(message)
     params = message_processor.process_message(message)
     print(params)
+    # Check if params is str
+    if isinstance(params, str):
+        print(send_group_msg(current_request_id, params))
+        return 'ok'
     if not params['valid']:
         # 解读失败
         print('解读失败')
@@ -72,11 +77,16 @@ def process_group_request(data):
 
         # calculate time taken
         start_time = time.time()
-        response = api.get_image(params)
+        try:
+            image_list = api.get_image(params)
+        except Exception as e:
+            print(e)
+            send_group_msg(current_request_id, nickname + str(e))
+            return 'ok'
 
         api_time_taken = time.time() - start_time
 
-        response_msg = process_images_to_msg(response, api_time_taken)
+        response_msg = process_images_to_msg(image_list, api_time_taken)
         if not response_msg:
             i = random.randint(0, len(nsfw_message) - 1)
             send_group_msg(current_request_id, nickname + nsfw_message[i])
@@ -92,6 +102,10 @@ def process_private_request(data):
     print(message)
     params = message_processor.process_message(message)
     print(params)
+    # Check if params is str
+    if isinstance(params, str):
+        print(sent_private_msg(current_request_id, params))
+        return 'ok'
     if not params['valid']:
         # 解读失败
         print('解读失败')
@@ -107,11 +121,16 @@ def process_private_request(data):
         # calculate time taken
         start_time = time.time()
 
-        images_list = api.get_image(params)
+        try:
+            image_list = api.get_image(params)
+        except Exception as e:
+            traceback.print_exc()
+            sent_private_msg(current_request_id, nickname + str(e))
+            return 'ok'
 
         api_time_taken = time.time() - start_time
 
-        response_msg = process_images_to_msg(images_list, api_time_taken, enable_nsfw_filter=False)
+        response_msg = process_images_to_msg(image_list, api_time_taken, enable_nsfw_filter=False)
 
         print(send_private_forward_msg(current_request_id, response_msg, self_name, fake_id))
     return 'ok'

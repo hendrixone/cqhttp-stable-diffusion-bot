@@ -11,8 +11,9 @@ class ImageProcessor:
     def __init__(self, cache_num):
         self.cache_num = cache_num
 
-    def handle_images(self, response):
+    def handle_images(self, response, prompt):
         """
+        :param prompt:
         :param response: SD_API response
         :return: A list containing the path of generated image
         """
@@ -40,5 +41,9 @@ class ImageProcessor:
             image = Image.open(io.BytesIO(base64.b64decode(i.split(",", 1)[0])))
             image.save(image_path)
             results.append(image_path)
+
+        # Save the prompt as a txt file along with the images
+        with open(os.path.join(base_dir, folder_name, 'prompt.txt'), 'w', encoding='utf-8') as f:
+            f.write(prompt)
 
         return results

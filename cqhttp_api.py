@@ -8,6 +8,8 @@ headers = {
     'Content-Type': 'application/json',
 }
 
+retries = 3
+
 
 def sent_private_msg(user_id, message):
     payload = {
@@ -30,7 +32,7 @@ def send_group_msg(group_id, message):
             "message": message,
         }
     }
-    for i in range(2):
+    for i in range(retries):
         response = requests.post(url, headers=headers, data=json.dumps(payload))
         response = response.json()
         if response['status'] == 'failed':
@@ -57,7 +59,7 @@ def send_group_forward_msg(group_id, messages, name, uin):
             "messages": build_messages
         }
     }
-    for i in range(2):
+    for i in range(retries):
         response = requests.post(url, headers=headers, data=json.dumps(payload))
         response = response.json()
         if response['status'] == 'failed':
@@ -84,7 +86,7 @@ def send_private_forward_msg(user_id, messages, name, uin):
             "messages": build_messages
         }
     }
-    for i in range(2):
+    for i in range(retries):
         response = requests.post(url, headers=headers, data=json.dumps(payload))
         response = response.json()
         if response['status'] == 'failed':
