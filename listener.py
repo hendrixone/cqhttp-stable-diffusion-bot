@@ -173,7 +173,7 @@ def process_images_to_msg(image_list, api_time_taken, enable_nsfw_filter=True):
     messages.append(generate_info(api_time_taken, image_list))
 
     # Append guide message
-    messages.append("查看指北文件获取更多用法，遇到喜欢的图可以尝试重绘功能！")
+    messages.append("查看指北文件获取更多用法！")
 
     return messages
 
@@ -193,7 +193,9 @@ def generate_info(time_taken, image_list):
     model_used = matches[0]
 
     message = (f"生成用时：{time_taken:.1f}秒\n"
-               f"使用模型：{model_used}")
+               f"使用模型：{model_used}\n\n"
+               f"正面提示词：{info['prompt']}\n\n"
+               f"负面提示词：{info['negative_prompt']}\n")
 
     # Generate id for each image
     for path in image_list:
