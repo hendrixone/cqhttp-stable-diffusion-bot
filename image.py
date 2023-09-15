@@ -22,7 +22,7 @@ class ImageProcessor:
         # ChatGPT Generation ⬇
 
         # create a unique folder for each invocation using timestamp
-        folder_name = str(int(time.time()))
+        folder_name = str(int(time.time()))[-6:-1]
         os.makedirs(os.path.join(base_dir, folder_name), exist_ok=True)
 
         # Get a list of all the existing folders and sort them by creation time

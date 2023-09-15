@@ -50,15 +50,10 @@ def process_group_request(data):
     message = data['message']
     current_request_id = data['group_id']
 
-    # check if sensitive keyword exist in extracted_content
-    if enable_keywords_check and any(keyword in message for keyword in sensitive_keywords):
-        print(send_group_msg(current_request_id, nickname + '达咩,不可以色色'))
-        return 'ok'
-
     print(message)
     params = message_processor.process_message(message)
     print(params)
-    # Check if params is str
+    # Check if params is str, if it's string, it means the process failed
     if isinstance(params, str):
         print(send_group_msg(current_request_id, params))
         return 'ok'
@@ -70,6 +65,12 @@ def process_group_request(data):
         if len(message) > words_limit:
             send_group_msg(current_request_id, nickname + '字数太长了，缩短点再试试吧')
             return 'ok'
+
+        # check if sensitive keyword exist in extracted_content
+        if enable_keywords_check and any(keyword in message for keyword in sensitive_keywords):
+            print(send_group_msg(current_request_id, nickname + '达咩,不可以色色'))
+            return 'ok'
+
         # 发送请求收到确认
         i = random.randint(0, len(received_message) - 1)
         print(send_group_msg(current_request_id, nickname +
