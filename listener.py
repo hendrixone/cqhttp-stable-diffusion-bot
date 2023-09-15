@@ -6,7 +6,7 @@ import traceback
 from flask import Flask, request
 
 from NSFW_Detector import predict
-from message import MessageProcessor, rebuild_request_msg
+from message import MessageProcessor
 from sd_api import SdApi
 from cqhttp_api import *
 
@@ -17,14 +17,14 @@ self_name = '小万'
 fake_id = '1145141919'
 
 # 敏感内容检测阈值，越低越严格
-censor_level = 0.6
+censor_level = 0.8
 
 # Block sensitive keywords
 enable_keywords_check = False
 sensitive_keywords = ['nude', 'nsfw', 'naked', 'nudity']
 
 # Prompt words limit
-words_limit = 180
+words_limit = 500
 
 received_message = ["脑瓜子飞速运转中",
                     "正在努力了脑补中", "身体热起来了~", "身体里面，好热~", "显存被完全填满了呢", "要出来了~", "嗯~~",
@@ -74,7 +74,7 @@ def process_group_request(data):
         # 发送请求收到确认
         i = random.randint(0, len(received_message) - 1)
         print(send_group_msg(current_request_id, nickname +
-                             received_message[i] + ' (' + rebuild_request_msg(params) + ')'))
+                             received_message[i] + ' (' + message_processor.rebuild_request_msg(params) + ')'))
 
         # calculate time taken
         start_time = time.time()
@@ -118,7 +118,7 @@ def process_private_request(data):
             return 'ok'
         # 发送请求收到确认
         print(sent_private_msg(current_request_id, nickname +
-                               '收到请求' + ' (' + rebuild_request_msg(params) + ')'))
+                               '收到请求' + ' (' + message_processor.rebuild_request_msg(params) + ')'))
         # calculate time taken
         start_time = time.time()
 

@@ -1,3 +1,4 @@
+import json
 import re
 from os import path
 
@@ -14,41 +15,41 @@ def replace_chinese_characters(text):
     return translated_text
 
 
-def rebuild_request_msg(params):
-    out = ''
-    # 双重校验
-    if params['multi']:
-        out += '更多'
-    if params['true']:
-        out += '真'
-
-    if params['res'] == 1:
-        out += '高清'
-    elif params['res'] == 2:
-        out += '超清'
-
-    out += '瑟图'
-
-    return out
-
-
 class MessageProcessor:
     def __init__(self):
+        self.params_regex = None
+        self.prompt_regex = None
+        self.config = None
+        self.active_profile = {}
         self.base_param = {
             'valid': False,
             'res': 0,
             'true': False,
             'multi': False,
-            'prompt': ''
+            'prompt': '',
+            'canvas': 'square'
         }
         self.param = self.base_param
-        self.prompt_regex = r"(?<=瑟图:)\s*(.*)"
-        self.params_regex = r'^(.*?)(?=瑟图:)'
+        self.process_config()
+        self.construct_regex()
+
+    def process_config(self):
+        # Read the active profile into a dictionary
+        with open('configs.json') as f:
+            self.config = json.load(f)
+            for profile, profile_config in self.config.items():
+                if profile_config['active']:
+                    self.active_profile[profile] = profile_config['keyword']
+
+    def construct_regex(self):
+        keywords = "|".join(self.active_profile.values())
+        self.prompt_regex = rf'({keywords}\s*:)(.*)'
+        self.params_regex = rf'^(.*?)(?={keywords}:)'
 
     def extract_prompt(self, message):
         prompt_match = re.search(self.prompt_regex, message)
         if prompt_match:
-            self.param['prompt'] = prompt_match.group(1)
+            self.param['prompt'] = prompt_match.group(2)
 
     def extract_params(self, message):
         params_match = re.search(self.params_regex, message)
@@ -58,6 +59,14 @@ class MessageProcessor:
             self.process_truth(params)
             self.process_multi(params)
             self.process_redraw_strength(params)
+            self.process_profile(message)
+            self.process_canvas(params)
+
+    def process_canvas(self, params):
+        if "肖像" in params:
+            self.param['canvas'] = 'portrait'
+        elif "风景" in params:
+            self.param['canvas'] = 'landscape'
 
     def process_resolution(self, params):
         if "高清" in params:
@@ -81,10 +90,17 @@ class MessageProcessor:
         else:
             self.param['redraw_strength'] = 1
 
+    def process_profile(self, message):
+        for profile_name, keyword in self.active_profile.items():
+            if keyword + ':' in message:
+                self.param['profile'] = profile_name
+                return
+
     def process_message(self, message):
         message = replace_chinese_characters(message)
         self.param = self.base_param.copy()
-        if "瑟图:" in message:
+        # TODO Making them dynamically load from the profile json
+        if any(keyword in message for keyword in self.active_profile.values()):
             self.extract_prompt(message)
             if self.param['prompt'] != '':
                 self.param['valid'] = True
@@ -114,7 +130,23 @@ class MessageProcessor:
                 self.param['prompt'] = f.read()
             self.param['valid'] = True
 
+    def rebuild_request_msg(self, params):
+        out = ''
+        # 双重校验
+        if params['multi']:
+            out += '更多'
+        if params['true']:
+            out += '真'
+
+        if params['res'] == 1:
+            out += '高清'
+        elif params['res'] == 2:
+            out += '超清'
+
+        out += self.config[params['profile']]['keyword']
+
+        return out
+
 
 if __name__ == '__main__':
-    p = MessageProcessor()
-    print(p.process_message('瑟图: loli'))
+ pass
