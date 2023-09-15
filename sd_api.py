@@ -12,9 +12,7 @@ url = "http://127.0.0.1:7860"
 
 avoid_nsfw_prompt = '{nsfw, nude}, '
 
-add_detailer = False
-
-available_size = {
+available_canvas_size = {
     "portrait": (1, 1.5),
     "landscape": (1.5, 1),
     "square": (1, 1)
@@ -45,7 +43,7 @@ class SdApi:
     def get_text2img(self, params):
         prompt = params['prompt']
 
-        size = available_size['square']
+        size = available_canvas_size[params['canvas']]
         width = self.config['base_size'] * size[0]
         height = self.config['base_size'] * size[1]
 
@@ -102,7 +100,7 @@ class SdApi:
             "override_settings": override_settings,
         }
 
-        if add_detailer:
+        if self.config['after_detail']:
             payload['alwayson_scripts'] = {
                 "ADetailer": {
                     "args": [
@@ -115,10 +113,11 @@ class SdApi:
 
         response = requests.post(url=f'{url}/sdapi/v1/txt2img', json=payload).json()
 
-        try:
-            print(response['parameters'])
-        except:
+        if isinstance(response, str):
             print(response)
+            return "API炸掉力"
+        else:
+            print(response['parameters'])
 
         self.last_gen_info = json.loads(response['info'])
 
