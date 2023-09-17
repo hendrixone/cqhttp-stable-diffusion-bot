@@ -1,3 +1,4 @@
+import json
 import random
 import time
 import re
@@ -16,15 +17,12 @@ nickname = 'bot:'
 self_name = '小万'
 fake_id = '1145141919'
 
-# 敏感内容检测阈值，越低越严格
-censor_level = 0.8
-
 # Block sensitive keywords
 enable_keywords_check = False
 sensitive_keywords = ['nude', 'nsfw', 'naked', 'nudity']
 
-# Prompt words limit
-words_limit = 500
+# Prompt words limit 0 for no limit
+words_limit = 1000
 
 received_message = ["脑瓜子飞速运转中",
                     "正在努力了脑补中", "身体热起来了~", "身体里面，好热~", "显存被完全填满了呢", "要出来了~", "嗯~~",
@@ -50,7 +48,18 @@ def process_group_request(data):
     message = data['message']
     current_request_id = data['group_id']
 
+    group_config = json.load(open('whitelist.json'))['group_id'][current_request_id]
+
+    if not group_config['enable']:
+        return 'ok'
+
     print(message)
+
+    if message == '#食用指南':
+        with open("manual.txt", "r") as file:
+            print(send_group_msg(current_request_id, file.read()))
+        return 'ok'
+    
     params = message_processor.process_message(message)
     print(params)
     # Check if params is str, if it's string, it means the process failed
@@ -62,7 +71,7 @@ def process_group_request(data):
         print('解读失败')
         return 'ok'
     else:
-        if len(message) > words_limit:
+        if words_limit != 0 and len(message) > group_config['words_limit']:
             send_group_msg(current_request_id, nickname + '字数太长了，缩短点再试试吧')
             return 'ok'
 
@@ -87,7 +96,7 @@ def process_group_request(data):
 
         api_time_taken = time.time() - start_time
 
-        response_msg = process_images_to_msg(image_list, api_time_taken)
+        response_msg = process_images_to_msg(image_list, api_time_taken, group_config['nsfw_filter'])
         if not response_msg:
             i = random.randint(0, len(nsfw_message) - 1)
             send_group_msg(current_request_id, nickname + nsfw_message[i])
@@ -155,10 +164,10 @@ def handle_request():
         return 'ok'
 
 
-def process_images_to_msg(image_list, api_time_taken, enable_nsfw_filter=True):
+def process_images_to_msg(image_list, api_time_taken, censor_level):
     messages = []
     for img_path in image_list:
-        if enable_nsfw_filter:
+        if censor_level != 0:
             # classify the image
             for key, value in predict.classify(model, img_path).items():
                 path = key

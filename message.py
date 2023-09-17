@@ -43,13 +43,13 @@ class MessageProcessor:
 
     def construct_regex(self):
         keywords = "|".join(self.active_profile.values())
-        self.prompt_regex = rf'({keywords}\s*:)(.*)'
+        self.prompt_regex = rf'({keywords}\s*)(.*)'
         self.params_regex = rf'^(.*?)(?={keywords}:)'
 
     def extract_prompt(self, message):
         prompt_match = re.search(self.prompt_regex, message)
         if prompt_match:
-            self.param['prompt'] = prompt_match.group(2)
+            self.param['prompt'] = prompt_match.group(2)[1:]
 
     def extract_params(self, message):
         params_match = re.search(self.params_regex, message)
