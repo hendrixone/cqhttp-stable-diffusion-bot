@@ -21,8 +21,6 @@ fake_id = '1145141919'
 enable_keywords_check = False
 sensitive_keywords = ['nude', 'nsfw', 'naked', 'nudity']
 
-# Prompt words limit 0 for no limit
-words_limit = 1000
 
 received_message = ["脑瓜子飞速运转中",
                     "正在努力了脑补中", "身体热起来了~", "身体里面，好热~", "显存被完全填满了呢", "要出来了~", "嗯~~",
@@ -32,7 +30,7 @@ nsfw_message = ["不可以色色", "这个图不太行捏", "过于劲爆，不�
 
 # Load whitelist from local json file
 whitelist = json.load(open('whitelist.json'))
-group_id = whitelist['group_id']
+group_id = list(whitelist['group_id'].keys())
 private_id = whitelist['private_id']
 
 # Initialize Stable Diffusion API
@@ -46,7 +44,7 @@ model = predict.load_model('./NSFW_Detector/mobilenet_v2_140_224')
 # 瑟图接口
 def process_group_request(data):
     message = data['message']
-    current_request_id = data['group_id']
+    current_request_id = str(data['group_id'])
 
     group_config = json.load(open('whitelist.json'))['group_id'][current_request_id]
 
@@ -71,7 +69,7 @@ def process_group_request(data):
         print('解读失败')
         return 'ok'
     else:
-        if words_limit != 0 and len(message) > group_config['words_limit']:
+        if group_config['words_limit'] != 0 and len(message) > group_config['words_limit']:
             send_group_msg(current_request_id, nickname + '字数太长了，缩短点再试试吧')
             return 'ok'
 
@@ -140,7 +138,7 @@ def process_private_request(data):
 
         api_time_taken = time.time() - start_time
 
-        response_msg = process_images_to_msg(image_list, api_time_taken, enable_nsfw_filter=False)
+        response_msg = process_images_to_msg(image_list, api_time_taken, 0)
 
         print(send_private_forward_msg(current_request_id, response_msg, self_name, fake_id))
     return 'ok'
@@ -155,7 +153,7 @@ def handle_request():
         if data['post_type'] != 'message':
             return 'ok'
 
-        if data['message_type'] == 'group' and data['group_id'] in group_id:
+        if data['message_type'] == 'group' and str(data['group_id']) in group_id:
             process_group_request(data)
 
         if data['message_type'] == 'private':

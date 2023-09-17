@@ -58,11 +58,11 @@ class SdApi:
                 width *= self.config['high_res_multiplier'][0]
                 height *= self.config['high_res_multiplier'][0]
         elif params['res'] == 2:
+            # Apply higher raw resolution and highres fix at same time for better quality
             enable_hr_fix = self.config['high_res_for'][1]
             hr_scale = self.config['high_res_multiplier'][1]
-            if not enable_hr_fix:
-                width *= self.config['high_res_multiplier'][1]
-                height *= self.config['high_res_multiplier'][1]
+            width *= self.config['high_res_multiplier'][1]
+            height *= self.config['high_res_multiplier'][1]
 
         batch_size = 1
         if params['multi']:
